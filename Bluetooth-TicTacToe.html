@@ -1,0 +1,280 @@
+<html>
+<head>
+<meta name="viewport" content="width=device-width">
+<script type="text/javascript" src='file:///android_asset/app.js'></script>
+</head>	
+<script type="text/javascript">
+/*
+.__________________WARNING___________________________.
+|YOU CAN CHANGE this.id SPK/APK ANY WAY YOU WANT|
+|      BUT YOU NEED this.id STICKER,DO NOT REMOVE        |
+|BECAUSE this.id IS COPYRIGHT OF THE HJCD STUDIOS   |
+\                                  COMPANY                                              /
+  \____________________________________________________/
+
+CEO: JONAS KRISTER VILLAMAYOR
+*/
+var stuff = {
+	"can_touch":true,
+	"still_game":false
+}
+function OnBack() {
+	if (confirm("Exit App?")) {
+		app.Exit();
+		bt.Disconnect();
+	}
+}
+function OnStart() {
+	app.EnableBackKey( false );
+	app.SetOrientation( "Portrait" );
+	app.PreventScreenLock();
+	app.SetScreenMode( "Game" );
+	
+	bt = app.CreateBluetoothSerial();
+	bt.SetOnConnect( connected );
+	bt.SetOnDisconnect( disconnected );
+	bt.SetOnReceive( received );
+	bt.SetSplitMode( "End","\n" );
+	bt.Listen( true );
+	
+	load_devices();
+}
+function connected(ok) {
+	if (ok) {
+		app.HideProgress();
+		stuff.still_game = true;
+		app.ShowPopup( "Connected","Bottom" );
+		document.getElementById("start_up").style.display="none";
+		document.getElementById("game").style.display="block";
+		calculate();
+		bt.Listen( false );
+	} else {
+		app.HideProgress();
+		stuff.still_game = false;
+		app.ShowPopup( "Failed To Connect","Bottom" );
+		bt.Listen( true );
+	}
+}
+function disconnected() {
+	app.ShowPopup( "Disconnected!","Bottom" );
+	document.getElementById("start_up").style.display="block";
+	document.getElementById("game").style.display="none";
+	reset_tiles();
+	if (!app.IsBluetoothEnabled()) {
+		app.SetBluetoothEnabled( true );
+	}
+	bt.Listen( true );
+}
+function received(data) {
+	if (data.indexOf("col") == 0) {
+		document.getElementById(data).style.backgroundColor="red";
+		stuff.can_touch = true;
+	}
+	else if (data.indexOf("¦") >= 0) {
+		var aa = data.indexOf("¦") + 1;
+		var msg = data.slice(aa,999999999);
+		app.ShowPopup( msg );
+	}
+	else if (data == "false") {
+		app.Alert("You Lost!","OH NO!");
+		reset_tiles();
+		bt.Disconnect();
+	}
+	else if (data == "tie") {
+		app.Alert("It's a Tie!","Tie");
+		reset_tiles();
+		bt.Disconnect();
+	}
+}
+function picked(id) {
+	if (stuff.can_touch) {
+		var doc = document.getElementById(id).style.backgroundColor;
+		if (doc == "red" || doc == "lime") {
+			app.ShowPopup("Already Taken","Bottom");
+		}
+		if (doc == "grey") {
+			document.getElementById(id).style.backgroundColor = "lime";
+			stuff.can_touch = false;
+			bt.Write( id + "\n" );
+		}
+	} else {
+		app.ShowPopup( "Let the other player pick first","Bottom" );
+	}
+}
+function calculate() {
+	if (col("col1") && col("col2") && col("col3")) {
+		app.Alert("You Won!","Congrats");
+		reset_tiles();
+		bt.Write( "false\n" );
+	}
+	else if (col("col4") && col("col5") && col("col6")) {
+		app.Alert("You Won!","Congrats");
+		reset_tiles();
+		bt.Write( "false\n" );
+	}
+	else if (col("col7") && col("col8") && col("col9")) {
+		app.Alert("You Won!","Congrats");
+		reset_tiles();
+		bt.Write( "false\n" );
+	}
+	else if (col("col1") && col("col4") && col("col7")) {
+		app.Alert("You Won!","Congrats");
+		reset_tiles();
+		bt.Write( "false\n" );
+	}
+	else if (col("col2") && col("col5") && col("col8")) {
+		app.Alert("You Won!","Congrats");
+		reset_tiles();
+		bt.Write( "false\n" );
+	}
+	else if (col("col3") && col("col6") && col("col9")) {
+		app.Alert("You Won!","Congrats");
+		reset_tiles();
+		bt.Write( "false\n" );
+	}
+	else if (col("col1") && col("col5") && col("col9")) {
+		app.Alert("You Won!","Congrats");
+		reset_tiles();
+		bt.Write( "false\n" );
+	}
+	else if (col("col3") && col("col5") && col("col7")) {
+		app.Alert("You Won!","Congrats");
+		reset_tiles();
+		bt.Write( "false\n" );
+	}
+	else if (cole("col1") && cole("col2") && cole("col3") && cole("col4") && cole("col5") && cole("col6") && cole("col7") && cole("col8") && cole("col9")) {
+		app.Alert("It's a Tie!","Tie");
+		reset_tiles();
+		bt.Write( "tie\n" );
+	} else {
+		setTimeout("calculate();",130);
+	}
+}
+function col(id) {
+	if (document.getElementById(id).style.backgroundColor == "lime") {
+		return true;
+	} else {
+		return false;
+	}
+}
+function cole(id) {
+	if (document.getElementById(id).style.backgroundColor != "grey") {
+		return true;
+	} else {
+		return false;
+	}
+}
+function reset_tiles() {
+	for(var i = 1; i < 10; i++) {
+		document.getElementById("col" + i).style.backgroundColor="grey";
+	}
+}
+function load_devices() {
+	document.getElementById("devices").innerHTML="";
+	var bt_list = app.GetPairedBtDevices();
+	for(var i = 0; i < bt_list.length; i++) {
+		var click = "connect('" + bt_list[i].name + "','" + bt_list[i].address + "');";
+		document.getElementById("devices").innerHTML+="<hr><table onClick=" + click + "><tr><td>Name:</td><td>" + bt_list[i].name + "</td></tr><tr><td>Address:</td><td>" + bt_list[i].address + "</td></tr></table>";
+	}
+}
+function send_msg() {
+	var msg = document.getElementById("msg").value.replace("\n","");
+	if (msg.length >= 1) {
+		bt.Write( "¦" + msg + "\n" );
+		document.getElementById("msg").value = "";
+	}
+}
+function connect(name,address) {
+	app.ShowProgress( "Connecting to: " + name );
+	bt.Connect( address );
+}
+function help() {
+	var msg = "Your Device Name: " + app.GetBluetoothName() + "\n" +
+	"Your Device Address: " + app.GetBluetoothAddress() + "\n\n" +
+	"How do i connect to other phones?\n" +
+	"To connect to other phones you need to know their bluetooth name or address\n\n" +
+	"I dont see my friends device\n" +
+	"Pair with his device or select the custom address option to enter his device address\n\n" +
+	"How do i know my address?\n" +
+	"At the top there is some details about your device\n\n" +
+	"Found a bug? Report it here:\n" +
+	"jonasvillamayor13@gmail.com";
+	app.Alert(msg,"Help");
+}
+function cus() {
+	var address = prompt("Enter Device Address");
+	if (address != null) {
+		if (address.indexOf(":") == 2) {
+			bt.Connect( address );
+		} else {
+			app.ShowPopup( "Invalid Address","Buttom" );
+		}
+	}
+}
+</script>
+<style type="text/css">
+body {
+	background-image: url("Img/BlueBack.jpg"); 
+}
+#col1,#col2,#col3,#col4,#col5,#col6,#col7,#col8,#col9 {
+	height: 100px;
+	width: 100px;
+}
+input[type="button"] {
+	color: white;
+	background-color: rgb(0,150,255);
+	border-radius: 20px;
+	padding: 5px;
+	border-color: blue;
+	font-size: 20px;
+}
+input[type="text"] {
+	border-color: grey;
+	padding: 5px;
+	border-radius: 20px;
+	width: 100%;
+	font-size: 20px;
+}
+td {
+	color: white;
+}
+</style>
+<body onload="app.Start()">
+<center>
+<div id="start_up">
+<h1 style="color: white;">Paired Devices</h1>
+<input type="button" value="Reload" onClick="load_devices();">
+<input type="button" value="Custom Address" onClick="cus();">
+<input type="button" value="Help" onClick="help();">
+<div id="devices">
+<h1 style="color: red;">No Paired Devices</h1>
+</div>
+</div>
+<div id="game" style="display: none">
+<table>
+<tr>
+<td><div id="col1" style="background-color: grey;" onClick="picked(this.id);"></div></td>
+<td><div id="col2" style="background-color: grey;" onClick="picked(this.id);"></div></td>
+<td><div id="col3" style="background-color: grey;" onClick="picked(this.id);"></div></td>
+</tr>
+<tr>
+<td><div id="col4" style="background-color: grey;" onClick="picked(this.id);"></div></td>
+<td><div id="col5" style="background-color: grey;" onClick="picked(this.id);"></div></td>
+<td><div id="col6" style="background-color: grey;" onClick="picked(this.id);"></div></td>
+</tr>
+<tr>
+<td><div id="col7" style="background-color: grey;" onClick="picked(this.id);"></div></td>
+<td><div id="col8" style="background-color: grey;" onClick="picked(this.id);"></div></td>
+<td><div id="col9" style="background-color: grey;" onClick="picked(this.id);"></div></td>
+</tr>
+</table>
+<input type="text" placeholder="Message" id="msg">
+<br>
+<input type="button" style="width: 50%" value="Send" onClick="send_msg();">
+<br>
+<br>
+<input type="button" style="width: 50%; background-Color: red;" value="Disconnect" onClick="bt.Disconnect();">
+</div>
+</center>
+</body>
+</html>
